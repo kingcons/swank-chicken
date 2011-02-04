@@ -61,13 +61,13 @@
          (pad-hex (lambda (n)
                     (pad-char #\0 (pad/left 6 (num n 16)))))
          (packet (fmt #f (pad-hex (string-length string)) string)))
-                      
+
     ;; This may be called by code that has set print-length-limit so we
     ;; have to use this kludge to avoid truncating the packet.
     (##sys#with-print-length-limit #f (lambda ()
                                         (debug-print (fmt #f "WRITE " (wrt packet)))
                                         (display packet out)))
-       
+
     (flush-output out)))
 
 ;; Replace Common Lisp-isms such as :foo, nil, and t with (quote foo),
@@ -83,7 +83,7 @@
        ((eq? sym 't)
         #t)
        (else sym))))
-  
+
   (cond
    ((list? sexp)
     (map swank-cleanup sexp))
@@ -121,7 +121,7 @@
                        (else ""))))
          " "
          (dsp (or (vector-ref f 1) ""))))
-  
+
   (define (loop n frames)
     (cond
      ((null? frames) '())
@@ -169,7 +169,7 @@
    void))
 
 ;; Create an input port that reads data by calling back into Emacs.
-(define (swank-input-port in out) 
+(define (swank-input-port in out)
   (let ((buffer #f))
     (define (read-callback)
       (if buffer
@@ -190,7 +190,7 @@
                   #!eof)))))
 
     (define (ready-callback) buffer)
-    
+
     (make-input-port read-callback ready-callback void)))
 
 ;; Evaluate an S-expression and returns a pair (condition . trace) if an
@@ -220,7 +220,7 @@
   (let ((result `(:return (:abort nil) ,id)))
     (dynamic-wind
       void
-      
+
       (lambda ()
         (let ((thing (with-output-to-port (swank-output-port out)
                        (lambda ()
@@ -234,7 +234,7 @@
             (swank-exception in out id (car thing) (cdr thing)))
            (((condition-predicate 'user-interrupt) (car thing))
             (set! result `(:return (:abort user-interrupt) ,id))))))
-           
+
       ;; Output is always written when unwinding the stack to ensure we
       ;; reply to every message e.g. when escaping via continuation to
       ;; the top level after exiting the debugger.
@@ -263,7 +263,7 @@
         (write-port-file port file))
     (dynamic-wind
       (lambda () #f)
-      
+
       (lambda ()
         (call-with-values
             (lambda () (tcp-accept listener))
@@ -278,11 +278,11 @@
                  (cond
                   (((condition-predicate 'user-interrupt) exn)
                    (*swank-top-level* (void)))
-                  (else 
+                  (else
                    (orig-handler exn))))
                (lambda ()
                  (swank-event-loop in out)))))))
-      
+
       (lambda ()
         (tcp-close listener)))))
 
@@ -305,7 +305,7 @@
 (define (swank:connection-info)
   `(:ok (:pid ,(current-process-id)
          :package (:name CSI :prompt CSI)
-         :lisp-implementation 
+         :lisp-implementation
          (:type "Chicken Scheme" :version ,(chicken-version)))))
 
 ;; For us this call is fairly pointless, but it names the REPL.
@@ -318,7 +318,7 @@
     (let ((form (read)))
       (cond
        ((eof-object? form) '())
-       (else (cons form (get-forms))))))       
+       (else (cons form (get-forms))))))
 
   (with-input-from-string str get-forms))
 
@@ -379,9 +379,9 @@
   (*swank-top-level* (void)))
 
 ;; Return the local variables for frame n
-;(:ok (((:name "SB-DEBUG::ARG-0" 
-;            :id 0 :value "(ERROR \"foo\")") 
-;            (:name "SB-DEBUG::ARG-1" :id 0 
+;(:ok (((:name "SB-DEBUG::ARG-0"
+;            :id 0 :value "(ERROR \"foo\")")
+;            (:name "SB-DEBUG::ARG-1" :id 0
 ;            :value "#<NULL-LEXENV>")) nil))
 
 (define (frame-info callframe)
@@ -439,7 +439,7 @@
   `(:ok t))
 
 ;; A more advanced version of swank:operator-arglist which highlights
-;; the the current cursor position in the argument list.
+;; the current cursor position in the argument list.
 (define (swank:autodoc forms . args)
 
   (define (find-cursor thing)
@@ -454,13 +454,13 @@
             (or (find-cursor (car elems))
                 (loop (cdr elems))))))
      (else #f)))
-  
+
   (define (highlight-arg info args)
     (cond
      ((null? info) '())
      ((null? args) info)
      ((not (pair? info))  ; Variable length argument list
-      (list '===> info '<===))  
+      (list '===> info '<===))
      ((eq? (car args) 'swank::%cursor-marker%)
       (append (list '===> (car info) '<===)
               (cdr info)))
@@ -468,7 +468,7 @@
       (highlight-arg info (cdr args)))
      (else (cons (car info)
                  (highlight-arg (cdr info) (cdr args))))))
-  
+
   (define (info sym)
     (cond
      ((unbound? sym) #f)
@@ -478,7 +478,7 @@
             pi
             `(,pi . args))))
      (else #f)))
-  
+
   (let ((where (find-cursor forms)))
     (if (and where (string? (car where)))
         (let ((i (info (string->symbol (car where)))))
@@ -486,6 +486,10 @@
               `(:ok ,(fmt #f (highlight-arg i where)))
               `(:ok :not-available)))
         '(:ok :not-available))))
+
+;; Keep older versions of SLIME from whining about
+;; arglist-for-echo-area being undefined
+(define swank:arglist-for-echo-area swank:autodoc)
 
 ;; Return a list of all symbols that start with `prefix'.
 (define (swank:simple-completions prefix _)
@@ -516,7 +520,7 @@
       ((method) ':generic-function)
       ((egg) ':egg)   ; Not visible
       (else ':variable)))
-  
+
   `(:ok ,(map (lambda (node)
                 (list ':designator (fmt #f (node-id node))
                       (slime-node-type node) (node-signature node)))
